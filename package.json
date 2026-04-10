@@ -1,0 +1,20 @@
+{
+  "name": "@benjaminholderbein/mcp-server-svg",
+  "version": "1.0.0",
+  "description": "MCP server that screenshots SVG files via headless Playwright and returns a base64 PNG to Claude Code",
+  "type": "module",
+  "bin": {
+    "mcp-server-svg": "./index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "playwright": "^1.44.0"
+  },
+  "keywords": ["mcp", "svg", "screenshot", "playwright", "claude"],
+  "author": "BenjaminHolderbein",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BenjaminHolderbein/mcp-server-svg.git"
+  }
+}
