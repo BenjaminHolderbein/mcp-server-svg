@@ -30,6 +30,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             type: 'string',
             description: 'CSS background color (e.g. "white"). Defaults to transparent.',
           },
+          focus_id: {
+            type: 'string',
+            description: 'ID of an SVG element to zoom into. The screenshot will be cropped to that element\'s bounding box plus padding.',
+          },
+          padding: {
+            type: 'number',
+            description: 'Pixels of padding around the focused element when using focus_id. Defaults to 20.',
+          },
+          view_box: {
+            type: 'string',
+            description: 'Manual crop region as "x y width height". Use when the target has no id.',
+          },
         },
       },
     },
@@ -41,7 +53,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     throw new Error(`Unknown tool: ${request.params.name}`);
   }
 
-  const { file_path, svg_content, background } = request.params.arguments ?? {};
+  const { file_path, svg_content, background, focus_id, padding, view_box } = request.params.arguments ?? {};
 
   if (!file_path && !svg_content) {
     throw new Error('Provide either file_path or svg_content.');
@@ -50,7 +62,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     throw new Error('Provide only one of file_path or svg_content, not both.');
   }
 
-  const base64 = await screenshotSvg({ file_path, svg_content, background });
+  const base64 = await screenshotSvg({ file_path, svg_content, background, focus_id, padding, view_box });
 
   return {
     content: [
