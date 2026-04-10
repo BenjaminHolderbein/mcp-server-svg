@@ -12,11 +12,17 @@ async function getBrowser() {
     _browser = b;
     _browserPromise = null;
     return b;
+  }).catch((err) => {
+    _browserPromise = null;
+    throw err;
   });
   return _browserPromise;
 }
 
 export async function closeBrowser() {
+  const pending = _browserPromise;
+  _browserPromise = null;
+  if (pending) await pending.catch(() => {});
   if (_browser) {
     await _browser.close();
     _browser = null;
@@ -45,6 +51,15 @@ function parseSvgDimensions(svgText) {
   return { width: width || 800, height: height || 600 };
 }
 
+// ── CSS background sanitization ─────────────────────────────────────────────
+const SAFE_BG_RE = /^(?:transparent|inherit|none|[a-z]+|#[0-9a-f]{3,8}|rgba?\(\s*[\d.,\s%]+\)|hsla?\(\s*[\d.,\s%deg]+\))$/i;
+
+function sanitizeBackground(bg) {
+  if (!bg) return null;
+  if (SAFE_BG_RE.test(bg.trim())) return bg.trim();
+  throw new Error(`Invalid background value: "${bg}". Use a CSS color name, hex, rgb(), or hsl().`);
+}
+
 // ── SVG text / structure extraction ─────────────────────────────────────────
 function extractSvgInfo(svgText) {
   const info = { texts: [], ids: [], classes: [], dimensions: null, viewBox: null, elements: {} };
@@ -56,11 +71,17 @@ function extractSvgInfo(svgText) {
   const vbMatch = svgText.match(/<svg[^>]*\sviewBox=["']([^"']+)["']/i);
   if (vbMatch) info.viewBox = vbMatch[1].trim();
 
-  // Text content — extract from <text>, <tspan>, <title>, <desc>
-  const textTags = svgText.matchAll(/<(?:text|tspan|title|desc)[^>]*>([\s\S]*?)<\/(?:text|tspan|title|desc)>/gi);
-  for (const m of textTags) {
-    const cleaned = m[1].replace(/<[^>]+>/g, '').trim();
-    if (cleaned) info.texts.push(cleaned);
+  // Text content — prefer leaf nodes (tspan, title, desc), fall back to text
+  const seen = new Set();
+  for (const tag of ['tspan', 'title', 'desc', 'text']) {
+    const matches = svgText.matchAll(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'gi'));
+    for (const m of matches) {
+      const cleaned = m[1].replace(/<[^>]+>/g, '').trim();
+      if (cleaned && !seen.has(cleaned)) {
+        seen.add(cleaned);
+        info.texts.push(cleaned);
+      }
+    }
   }
 
   // IDs
@@ -107,7 +128,7 @@ export async function screenshotSvg({
   const dims = parseSvgDimensions(svgText);
   const width = overrideWidth || dims.width;
   const height = overrideHeight || dims.height;
-  const bg = background || 'transparent';
+  const bg = sanitizeBackground(background) || 'transparent';
 
   // Cap dimensions to prevent massive renders
   const cappedWidth = Math.min(width, 4096);
