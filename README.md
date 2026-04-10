@@ -18,17 +18,14 @@ npx playwright install chromium
 
 ## Claude Code configuration
 
-Add the following to your Claude Code MCP settings (`~/.claude/settings.json` or via the Claude Code UI):
+Register the server via the Claude Code CLI:
 
-```json
-{
-  "mcpServers": {
-    "svg": {
-      "command": "npx",
-      "args": ["-y", "@benjaminholderbein/mcp-server-svg"]
-    }
-  }
-}
+```bash
+# Project-scoped (this project only)
+claude mcp add svg npx -- -y @benjaminholderbein/mcp-server-svg
+
+# Or globally (available in all projects)
+claude mcp add svg npx -- -y @benjaminholderbein/mcp-server-svg -s user
 ```
 
 ## Usage
@@ -43,13 +40,17 @@ Once configured, Claude Code can call the tool automatically while working with 
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `file_path` | string | one of the two | Path to an `.svg` file (absolute or relative to cwd) |
-| `svg_content` | string | one of the two | Raw SVG markup |
+| `file_path` | string | one of the two | Path to an `.svg` file on disk — the primary way to use this tool |
+| `svg_content` | string | one of the two | Raw SVG markup — for cases where you want to render inline SVG without a file |
 | `background` | string | optional | CSS background color, e.g. `"white"`. Defaults to transparent. |
 
 ## Why I built this
 
-When iterating on SVG files with Claude Code, the feedback loop was clunky — save the file, open a browser, refresh, go back to the terminal. This server closes that loop. Claude Code can now render and see the SVG in the same context where it's editing it, making visual iteration instant.
+Mermaid is the go-to for diagramming with Claude, but its auto-layout quickly becomes a constraint — you lose control of positioning, spacing, and visual structure the moment your diagram gets complex.
+
+SVG is the better tool for precise, expressive diagrams. The problem is that Claude Code can't easily iterate on SVG because it can't see what it's producing. The feedback loop was broken: write SVG, save, open a browser, refresh, go back to the terminal, repeat.
+
+This server closes that loop. Claude Code can now render and see the SVG in the same context where it's editing it — making visual iteration with SVG as fast and natural as working with any other file.
 
 ## License
 
