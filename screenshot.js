@@ -1,6 +1,9 @@
 import { chromium } from 'playwright';
 import { readFile } from 'fs/promises';
 
+// Target long edge for zoomed screenshots — Claude's sweet spot before it downscales
+const ZOOM_TARGET_PX = 1092;
+
 function parseSvgDimensions(svgText) {
   const widthMatch = svgText.match(/<svg[^>]*\swidth=["']([0-9.]+)[^"']*["']/i);
   const heightMatch = svgText.match(/<svg[^>]*\sheight=["']([0-9.]+)[^"']*["']/i);
@@ -26,6 +29,13 @@ function parseSvgDimensions(svgText) {
     width: width || 800,
     height: height || 600,
   };
+}
+
+// Scale viewport to ZOOM_TARGET_PX on the long edge, preserving aspect ratio
+function targetViewport(w, h) {
+  const scale = ZOOM_TARGET_PX / Math.max(w, h);
+  if (scale <= 1) return { width: w, height: h }; // already small enough
+  return { width: Math.round(w * scale), height: Math.round(h * scale) };
 }
 
 export async function screenshotSvg({ file_path, svg_content, background, focus_id, padding = 20, view_box }) {
@@ -63,13 +73,26 @@ export async function screenshotSvg({ file_path, svg_content, background, focus_
     if (focus_id) {
       const box = await page.locator(`#${focus_id}`).boundingBox();
       if (!box) throw new Error(`Element with id "${focus_id}" not found in SVG.`);
-      const clip = {
-        x: Math.max(0, box.x - padding),
-        y: Math.max(0, box.y - padding),
-        width: box.width + padding * 2,
-        height: box.height + padding * 2,
-      };
-      const buffer = await page.screenshot({ type: 'png', clip, omitBackground: bg === 'transparent' });
+
+      const cropW = box.width + padding * 2;
+      const cropH = box.height + padding * 2;
+
+      // Scale so the crop region fills a ZOOM_TARGET_PX viewport
+      const scale = ZOOM_TARGET_PX / Math.max(cropW, cropH);
+      const vp = { width: Math.round(cropW * scale), height: Math.round(cropH * scale) };
+
+      // Zoom into the element: scale the SVG up and shift the origin so the
+      // crop region sits at (0,0) in the viewport — same as Chrome's zoom
+      const originX = box.x - padding;
+      const originY = box.y - padding;
+      await page.setViewportSize(vp);
+      await page.evaluate(({ scale, originX, originY }) => {
+        const svg = document.querySelector('svg');
+        svg.style.transformOrigin = '0 0';
+        svg.style.transform = `scale(${scale}) translate(${-originX}px, ${-originY}px)`;
+      }, { scale, originX, originY });
+
+      const buffer = await page.screenshot({ type: 'png', omitBackground: bg === 'transparent' });
       return buffer.toString('base64');
     }
 
@@ -78,7 +101,18 @@ export async function screenshotSvg({ file_path, svg_content, background, focus_
       const parts = view_box.trim().split(/[\s,]+/).map(Number);
       if (parts.length !== 4) throw new Error('view_box must be "x y width height"');
       const [x, y, w, h] = parts;
-      const buffer = await page.screenshot({ type: 'png', clip: { x, y, width: w, height: h }, omitBackground: bg === 'transparent' });
+
+      const scale = ZOOM_TARGET_PX / Math.max(w, h);
+      const vp = { width: Math.round(w * scale), height: Math.round(h * scale) };
+
+      await page.setViewportSize(vp);
+      await page.evaluate(({ scale, x, y }) => {
+        const svg = document.querySelector('svg');
+        svg.style.transformOrigin = '0 0';
+        svg.style.transform = `scale(${scale}) translate(${-x}px, ${-y}px)`;
+      }, { scale, x, y });
+
+      const buffer = await page.screenshot({ type: 'png', omitBackground: bg === 'transparent' });
       return buffer.toString('base64');
     }
 
