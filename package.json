@@ -1,6 +1,6 @@
 {
   "name": "@benjaminholderbein/mcp-server-svg",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "MCP server that screenshots SVG files via headless Playwright and returns a base64 PNG to Claude Code",
   "type": "module",
   "bin": {
