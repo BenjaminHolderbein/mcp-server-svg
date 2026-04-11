@@ -2,6 +2,8 @@
 
 An MCP server that lets Claude Code screenshot SVG files directly in context. Pass a file path, get back a rendered PNG — no scripts, no wrapper files, no manual steps.
 
+![System diagram](diagram.svg)
+
 ## How it works
 
 Claude Code calls the `screenshot_svg` tool with an SVG file path. The server reads the file, wraps it in a minimal HTML page, renders it headlessly with Playwright Chromium, and returns a base64 PNG image that Claude Code displays inline.
