@@ -14,7 +14,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'screenshot_svg',
       description:
-        'Renders an SVG file (or raw SVG markup) as a PNG screenshot and returns it as a base64 image. Use file_path for files on disk, or svg_content for inline SVG markup.',
+        'Renders an SVG file (or raw SVG markup) as a PNG screenshot and returns it as a base64 image. Use file_path for files on disk (primary usage), or svg_content for inline SVG markup. Use focus_id to zoom into a specific element by its id attribute, or view_box to crop to a manual pixel region.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -32,7 +32,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           focus_id: {
             type: 'string',
-            description: 'ID of an SVG element to zoom into. The screenshot will be cropped to that element\'s bounding box plus padding.',
+            description: 'ID of an SVG element to zoom into (matches the id="..." attribute). The output is cropped to that element\'s bounding box. Ideal for inspecting a sub-diagram or specific region without needing to know pixel coordinates.',
           },
           padding: {
             type: 'number',
@@ -40,7 +40,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           view_box: {
             type: 'string',
-            description: 'Manual crop region as "x y width height". Use when the target has no id.',
+            description: 'Manual pixel crop region as "x y width height" — coordinates in the rendered SVG\'s pixel space. Use as a fallback when the target element has no id.',
           },
         },
       },
